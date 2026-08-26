@@ -9,6 +9,17 @@ const md = new MarkdownIt({
 })
 
 export function parseMarkdown(content: string): Node {
+  try {
+    return parseMarkdownUnsafe(content)
+  } catch (e) {
+    console.error('parseMarkdown failed, falling back to code block view:', e)
+    return schema.nodes.doc.create(null, [
+      schema.nodes.code_block.create({ language: 'markdown' }, content ? schema.text(content) : undefined),
+    ])
+  }
+}
+
+function parseMarkdownUnsafe(content: string): Node {
   let body = content
   let frontMatter = ''
 
@@ -51,9 +62,9 @@ export function parseMarkdown(content: string): Node {
         i++
       }
       const innerNodes = parseTokens(inner)
-      if (innerNodes.length > 0) {
-        nodes.push(schema.nodes.blockquote.create(null, innerNodes))
-      }
+      nodes.push(schema.nodes.blockquote.create(null,
+        innerNodes.length > 0 ? innerNodes : [schema.nodes.paragraph.create()]
+      ))
     } else if (token.type === 'bullet_list_open') {
       const listNodes = parseList(tokens, i, 'bullet_list')
       nodes.push(listNodes.node)
@@ -155,9 +166,9 @@ function parseTokens(tokens: any[]): Node[] {
         i++
       }
       const innerNodes = parseTokens(inner)
-      if (innerNodes.length > 0) {
-        nodes.push(schema.nodes.blockquote.create(null, innerNodes))
-      }
+      nodes.push(schema.nodes.blockquote.create(null,
+        innerNodes.length > 0 ? innerNodes : [schema.nodes.paragraph.create()]
+      ))
     } else if (token.type === 'bullet_list_open') {
       const listNodes = parseList(tokens, i, 'bullet_list')
       nodes.push(listNodes.node)
@@ -325,6 +336,12 @@ function parseInline(tokens: any[]): Node[] {
       }))
     } else if (token.type === 'math_inline') {
       result.push(schema.text(token.content, [schema.marks.math_inline.create()]))
+    } else if (token.type === 'html_inline') {
+      if (token.content === '<br>' || token.content === '<br/>') {
+        result.push(schema.nodes.hard_break.create())
+      } else {
+        result.push(schema.text(token.content, markStack.length > 0 ? markStack.slice() : undefined))
+      }
     }
   }
 
