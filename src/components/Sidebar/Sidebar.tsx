@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileTree } from './FileTree'
 import { Outline } from './Outline'
+import { BacklinksPanel } from './BacklinksPanel'
 
 interface Heading {
   level: number
@@ -22,9 +23,10 @@ interface Props {
   onWorkspaceSelect?: (ws: WorkspaceConfig) => void
   onWorkspaceCreate?: () => void
   activeWorkspace?: WorkspaceConfig | null
+  onFileCreated?: (filePath: string) => void
 }
 
-export function Sidebar({ visible, outlineVisible, folderPath, headings, activeFilePath, onFileSelect, onHeadingClick, onOpenFolder, workspaces, onWorkspaceSelect, onWorkspaceCreate, activeWorkspace }: Props) {
+export function Sidebar({ visible, outlineVisible, folderPath, headings, activeFilePath, onFileSelect, onHeadingClick, onOpenFolder, workspaces, onWorkspaceSelect, onWorkspaceCreate, activeWorkspace, onFileCreated }: Props) {
   const { t, i18n } = useTranslation()
   const isZh = i18n.language.startsWith('zh')
   const [activePanel, setActivePanel] = useState<'files' | 'outline'>('files')
@@ -38,11 +40,15 @@ export function Sidebar({ visible, outlineVisible, folderPath, headings, activeF
     return true
   })
 
-  useEffect(() => {
+  const refreshFileTree = useCallback(() => {
     if (folderPath && window.electronAPI) {
       window.electronAPI.readDir(folderPath).then(setFileTree)
     }
   }, [folderPath])
+
+  useEffect(() => {
+    refreshFileTree()
+  }, [refreshFileTree])
 
   if (!visible) return null
 
@@ -111,6 +117,8 @@ export function Sidebar({ visible, outlineVisible, folderPath, headings, activeF
                 nodes={filteredFileTree}
                 onFileSelect={onFileSelect}
                 activeFilePath={activeFilePath}
+                onRefresh={refreshFileTree}
+                onFileCreated={onFileCreated}
               />
             ) : (
               <div className="sidebar-empty">
@@ -125,6 +133,13 @@ export function Sidebar({ visible, outlineVisible, folderPath, headings, activeF
           <Outline headings={headings} onHeadingClick={onHeadingClick} />
         )}
       </div>
+      {activePanel === 'files' && activeFilePath && folderPath && (
+        <BacklinksPanel
+          folderPath={folderPath}
+          activeFilePath={activeFilePath}
+          onFileSelect={onFileSelect}
+        />
+      )}
     </div>
   )
 }

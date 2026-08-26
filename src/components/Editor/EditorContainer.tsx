@@ -1,6 +1,8 @@
-import React, { useRef, useCallback, useMemo } from 'react'
+import React, { useRef, useCallback, useMemo, useEffect, useState, forwardRef, useImperativeHandle } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ProseMirrorEditor, ProseMirrorEditorRef } from './ProseMirrorEditor'
 import { SourceEditor } from './SourceEditor'
+import { MarkdownPreview } from './MarkdownPreview'
 import { SearchReplace, SearchOptions, SearchResult } from './SearchReplace'
 
 interface Heading {
@@ -12,16 +14,30 @@ interface Heading {
 interface Props {
   content: string
   sourceMode: boolean
+  splitMode: boolean
   searchVisible: boolean
   onSearchClose: () => void
   onChange: (content: string) => void
   onOutlineChange: (headings: Heading[]) => void
+  onWikiLinkClick?: (target: string) => void
 }
 
-export function EditorContainer({ content, sourceMode, searchVisible, onSearchClose, onChange, onOutlineChange }: Props) {
+export interface EditorContainerRef {
+  execCommand: (cmd: string, ...args: any[]) => void
+}
+
+export const EditorContainer = forwardRef<EditorContainerRef, Props>(function EditorContainer({ content, sourceMode, splitMode, searchVisible, onSearchClose, onChange, onOutlineChange, onWikiLinkClick }, ref) {
+  const { i18n } = useTranslation()
+  const isZh = i18n.language.startsWith('zh')
   const editorRef = useRef<ProseMirrorEditorRef>(null)
   const searchMatchesRef = useRef<{ from: number; to: number }[]>([])
   const searchIndexRef = useRef(0)
+
+  useImperativeHandle(ref, () => ({
+    execCommand(cmd: string, ...args: any[]) {
+      editorRef.current?.execCommand(cmd, ...args)
+    },
+  }))
 
   const handleFind = useCallback((query: string, options: SearchOptions): SearchResult => {
     if (!editorRef.current || sourceMode) return { total: 0, current: 0 }
@@ -30,14 +46,12 @@ export function EditorContainer({ content, sourceMode, searchVisible, onSearchCl
 
     const matches: { from: number; to: number }[] = []
     const doc = view.state.doc
-    const text = doc.textContent
 
     try {
       let flags = 'g'
       if (!options.matchCase) flags += 'i'
       const regex = options.useRegex ? new RegExp(query, flags) : new RegExp(escapeRegex(query), flags)
       let match
-      let offset = 0
 
       doc.descendants((node, pos) => {
         if (node.isText) {
@@ -102,6 +116,32 @@ export function EditorContainer({ content, sourceMode, searchVisible, onSearchCl
     return matches.length
   }, [])
 
+  if (splitMode) {
+    return (
+      <div className="editor-container split-mode">
+        <SearchReplace
+          visible={searchVisible}
+          onClose={onSearchClose}
+          onFind={handleFind}
+          onReplace={handleReplace}
+          onReplaceAll={handleReplaceAll}
+          onNavigate={handleNavigate}
+        />
+        <div className="split-panes">
+          <div className="split-pane split-pane-source">
+            <div className="split-pane-header">{isZh ? '源码' : 'Source'}</div>
+            <SourceEditor content={content} onChange={onChange} />
+          </div>
+          <div className="split-divider" />
+          <div className="split-pane split-pane-preview">
+            <div className="split-pane-header">{isZh ? '预览' : 'Preview'}</div>
+            <MarkdownPreview content={content} />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="editor-container">
       <SearchReplace
@@ -121,12 +161,13 @@ export function EditorContainer({ content, sourceMode, searchVisible, onSearchCl
             content={content}
             onChange={onChange}
             onOutlineChange={onOutlineChange}
+            onWikiLinkClick={onWikiLinkClick}
           />
         )}
       </div>
     </div>
   )
-}
+})
 
 function escapeRegex(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

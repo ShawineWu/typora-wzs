@@ -312,6 +312,57 @@ ipcMain.handle('shell:openExternal', async (_event, url: string) => {
   shell.openExternal(url)
 })
 
+ipcMain.handle('fs:createFile', async (_event, dirPath: string, filename: string) => {
+  const filePath = path.join(dirPath, filename)
+  if (fs.existsSync(filePath)) return null
+  fs.writeFileSync(filePath, '', 'utf-8')
+  return filePath
+})
+
+ipcMain.handle('fs:createDir', async (_event, dirPath: string, dirname: string) => {
+  const fullPath = path.join(dirPath, dirname)
+  if (fs.existsSync(fullPath)) return null
+  fs.mkdirSync(fullPath, { recursive: true })
+  return fullPath
+})
+
+ipcMain.handle('fs:rename', async (_event, oldPath: string, newName: string) => {
+  const dir = path.dirname(oldPath)
+  const newPath = path.join(dir, newName)
+  if (fs.existsSync(newPath)) return null
+  fs.renameSync(oldPath, newPath)
+  return newPath
+})
+
+ipcMain.handle('fs:scanBacklinks', async (_event, folderPath: string, targetName: string) => {
+  const backlinks: { name: string; path: string }[] = []
+  const targetPattern = `[[${targetName}]]`
+  const targetPatternAlt = `[[${targetName}|`
+
+  function scanDir(dir: string) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          scanDir(fullPath)
+        } else if (/\.(md|markdown)$/i.test(entry.name)) {
+          try {
+            const content = fs.readFileSync(fullPath, 'utf-8')
+            if (content.includes(targetPattern) || content.includes(targetPatternAlt)) {
+              backlinks.push({ name: entry.name.replace(/\.(md|markdown)$/i, ''), path: fullPath })
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+
+  scanDir(folderPath)
+  return backlinks
+})
+
 // Workspace operations
 ipcMain.handle('fs:deleteFile', async (_event, filePath: string) => {
   if (fs.existsSync(filePath)) {

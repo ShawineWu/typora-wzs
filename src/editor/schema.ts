@@ -289,6 +289,30 @@ const marks: Record<string, MarkSpec> = {
     parseDOM: [{ tag: 'span.math-inline' }],
     toDOM() { return ['span', { class: 'math-inline' }, 0] },
   },
+  wiki_link: {
+    attrs: {
+      target: {},
+      label: { default: null },
+    },
+    inclusive: false,
+    parseDOM: [{
+      tag: 'a.wiki-link',
+      getAttrs(dom: any) {
+        return {
+          target: dom.getAttribute('data-target') || dom.textContent,
+          label: dom.getAttribute('data-label') || null,
+        }
+      },
+    }],
+    toDOM(node) {
+      return ['a', {
+        class: 'wiki-link-node',
+        'data-target': node.attrs.target,
+        'data-label': node.attrs.label,
+        title: node.attrs.target,
+      }, 0]
+    },
+  },
 }
 
 export const schema = new Schema({ nodes, marks })

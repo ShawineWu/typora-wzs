@@ -32,6 +32,10 @@ const electronAPI = {
 
   readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke('fs:readImageAsDataUrl', filePath),
   deleteFile: (filePath: string) => ipcRenderer.invoke('fs:deleteFile', filePath),
+  createFile: (dirPath: string, filename: string) => ipcRenderer.invoke('fs:createFile', dirPath, filename),
+  createDir: (dirPath: string, dirname: string) => ipcRenderer.invoke('fs:createDir', dirPath, dirname),
+  rename: (oldPath: string, newName: string) => ipcRenderer.invoke('fs:rename', oldPath, newName),
+  scanBacklinks: (folderPath: string, targetName: string) => ipcRenderer.invoke('fs:scanBacklinks', folderPath, targetName),
   selectImage: () => ipcRenderer.invoke('dialog:selectImage'),
   selectDirectory: () => ipcRenderer.invoke('dialog:selectDirectory'),
 

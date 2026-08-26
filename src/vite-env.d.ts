@@ -34,6 +34,10 @@ interface ElectronAPI {
 
   readImageAsDataUrl: (filePath: string) => Promise<string>
   deleteFile: (filePath: string) => Promise<boolean>
+  createFile: (dirPath: string, filename: string) => Promise<string | null>
+  createDir: (dirPath: string, dirname: string) => Promise<string | null>
+  rename: (oldPath: string, newName: string) => Promise<string | null>
+  scanBacklinks: (folderPath: string, targetName: string) => Promise<Array<{ name: string; path: string }>>
   selectImage: () => Promise<string | null>
   selectDirectory: () => Promise<string | null>
 

@@ -257,13 +257,43 @@ function parseTable(tokens: any[], start: number): { node: Node; end: number } {
   }
 }
 
+function parseWikiLinks(text: string, marks: Mark[]): Node[] {
+  const result: Node[] = []
+  const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g
+  let lastIndex = 0
+  let match
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      result.push(schema.text(text.slice(lastIndex, match.index), marks.length > 0 ? marks.slice() : undefined))
+    }
+    const target = match[1].trim()
+    const label = match[2]?.trim() || null
+    const display = label || target
+    const wikiMark = schema.marks.wiki_link.create({ target, label })
+    result.push(schema.text(display, [...marks, wikiMark]))
+    lastIndex = match.index + match[0].length
+  }
+
+  if (lastIndex < text.length) {
+    result.push(schema.text(text.slice(lastIndex), marks.length > 0 ? marks.slice() : undefined))
+  }
+
+  return result
+}
+
 function parseInline(tokens: any[]): Node[] {
   const result: Node[] = []
   const markStack: Mark[] = []
 
   for (const token of tokens) {
     if (token.type === 'text') {
-      result.push(schema.text(token.content, markStack.length > 0 ? markStack.slice() : undefined))
+      const content = token.content
+      if (/\[\[/.test(content)) {
+        result.push(...parseWikiLinks(content, markStack.length > 0 ? markStack.slice() : []))
+      } else {
+        result.push(schema.text(content, markStack.length > 0 ? markStack.slice() : undefined))
+      }
     } else if (token.type === 'code_inline') {
       result.push(schema.text(token.content, [schema.marks.code.create()]))
     } else if (token.type === 'softbreak' || token.type === 'hardbreak') {
@@ -409,6 +439,12 @@ function serializeInline(node: Node): string {
           case 'code': text = `\`${text}\``; break
           case 'link': text = `[${text}](${mark.attrs.href})`; break
           case 'math_inline': text = `$${text}$`; break
+          case 'wiki_link': {
+            const target = mark.attrs.target
+            const label = mark.attrs.label
+            text = label ? `[[${target}|${label}]]` : `[[${target}]]`
+            break
+          }
         }
       }
       result += text

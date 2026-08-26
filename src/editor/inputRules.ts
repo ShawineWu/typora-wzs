@@ -96,6 +96,17 @@ export function buildInputRules() {
     markInputRule(/~~([^~]+)~~$/, schema.marks.strikethrough),
     markInputRule(/`([^`]+)`$/, schema.marks.code),
     markInputRule(/\$([^$]+)\$$/, schema.marks.math_inline),
+
+    // Wiki link: [[target]] or [[target|label]]
+    new InputRule(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]$/, (state, match, start, end) => {
+      const target = match[1].trim()
+      const label = match[2]?.trim() || null
+      const display = label || target
+      const tr = state.tr.delete(start, end)
+      const wikiMark = schema.marks.wiki_link.create({ target, label })
+      tr.insert(start, schema.text(display, [wikiMark]))
+      return tr
+    }),
   ]
 
   return inputRules({ rules })

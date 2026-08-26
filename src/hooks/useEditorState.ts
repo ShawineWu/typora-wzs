@@ -24,6 +24,7 @@ export function useEditorState() {
   const [sidebarVisible, setSidebarVisible] = useState(true)
   const [outlineVisible, setOutlineVisible] = useState(true)
   const [sourceMode, setSourceMode] = useState(false)
+  const [splitMode, setSplitMode] = useState(false)
   const [theme, setTheme] = useState<string>(() => {
     return localStorage.getItem('typora-wzs-theme') || 'light'
   })
@@ -180,6 +181,8 @@ export function useEditorState() {
     setOutlineVisible,
     sourceMode,
     setSourceMode,
+    splitMode,
+    setSplitMode,
     theme,
     setTheme,
     folderPath,

@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { TabBar } from './components/Tabs/TabBar'
 import { Toolbar } from './components/Toolbar/Toolbar'
 import { Sidebar } from './components/Sidebar/Sidebar'
-import { EditorContainer } from './components/Editor/EditorContainer'
+import { EditorContainer, EditorContainerRef } from './components/Editor/EditorContainer'
 import { StatusBar } from './components/StatusBar/StatusBar'
 import { WorkspaceCreate } from './components/Workspace/WorkspaceCreate'
 import { WorkspaceHome } from './components/Workspace/WorkspaceHome'
 import { SettingsDialog } from './components/Settings/SettingsDialog'
 import { useEditorState } from './hooks/useEditorState'
 import { serializeMarkdown, parseMarkdown } from './editor'
+import MarkdownIt from 'markdown-it'
 
 interface Heading {
   level: number
@@ -38,7 +39,7 @@ export default function App() {
   const { t } = useTranslation()
   const state = useEditorState()
   const [headings, setHeadings] = useState<Heading[]>([])
-  const editorCommandRef = useRef<((cmd: string, ...args: any[]) => void) | null>(null)
+  const editorContainerRef = useRef<EditorContainerRef>(null)
 
   const [showWorkspaceCreate, setShowWorkspaceCreate] = useState(false)
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null)
@@ -96,9 +97,7 @@ export default function App() {
   }, [state.activeTabId, state.activeTab.originalContent, state.updateTab])
 
   const handleCommand = useCallback((cmd: string, ...args: any[]) => {
-    if (editorCommandRef.current) {
-      editorCommandRef.current(cmd, ...args)
-    }
+    editorContainerRef.current?.execCommand(cmd, ...args)
   }, [])
 
   const handleFileSelect = useCallback(async (filePath: string) => {
@@ -111,6 +110,43 @@ export default function App() {
       console.error('Failed to open file:', err)
     }
   }, [state.openFile])
+
+  const handleWikiLinkClick = useCallback(async (target: string) => {
+    if (!window.electronAPI || !state.folderPath) return
+    const candidates = [`${target}.md`, `${target}.markdown`, target]
+    for (const name of candidates) {
+      const fullPath = `${state.folderPath}/${name}`
+      try {
+        const exists = await window.electronAPI.exists(fullPath)
+        if (exists) {
+          handleFileSelect(fullPath)
+          return
+        }
+      } catch {}
+    }
+    // Recursively search in subdirectories
+    const searchDir = async (dir: string): Promise<string | null> => {
+      try {
+        const entries = await window.electronAPI.readDir(dir)
+        for (const entry of entries) {
+          if (!entry.isDirectory && (entry.name === `${target}.md` || entry.name === `${target}.markdown`)) {
+            return entry.path
+          }
+        }
+        for (const entry of entries) {
+          if (entry.isDirectory && !entry.name.startsWith('.')) {
+            const found = await searchDir(entry.path)
+            if (found) return found
+          }
+        }
+      } catch {}
+      return null
+    }
+    const found = await searchDir(state.folderPath)
+    if (found) {
+      handleFileSelect(found)
+    }
+  }, [state.folderPath, handleFileSelect])
 
   const handleOpenFolder = useCallback(async () => {
     if (!window.electronAPI) return
@@ -148,7 +184,7 @@ export default function App() {
     unsubs.push(window.electronAPI.on('menu:new-file', () => { setActiveWorkspace(null); state.newTab() }))
     unsubs.push(window.electronAPI.on('menu:save', () => state.saveFile()))
     unsubs.push(window.electronAPI.on('menu:save-as', () => state.saveFileAs()))
-    unsubs.push(window.electronAPI.on('menu:toggle-source', () => state.setSourceMode(prev => !prev)))
+    unsubs.push(window.electronAPI.on('menu:toggle-source', () => { state.setSourceMode(prev => !prev); state.setSplitMode(false) }))
     unsubs.push(window.electronAPI.on('menu:toggle-sidebar', () => state.setSidebarVisible(prev => !prev)))
     unsubs.push(window.electronAPI.on('menu:toggle-outline', () => state.setOutlineVisible(prev => !prev)))
     unsubs.push(window.electronAPI.on('menu:find', () => state.setSearchVisible(true)))
@@ -215,7 +251,9 @@ export default function App() {
       />
       <Toolbar
         sourceMode={state.sourceMode}
-        onToggleSource={() => state.setSourceMode(prev => !prev)}
+        splitMode={state.splitMode}
+        onToggleSource={() => { state.setSourceMode(prev => !prev); state.setSplitMode(false) }}
+        onToggleSplit={() => { state.setSplitMode(prev => !prev); state.setSourceMode(false) }}
         onCommand={handleCommand}
         onOpenSettings={() => setShowSettings(true)}
       />
@@ -233,6 +271,7 @@ export default function App() {
           onWorkspaceSelect={setActiveWorkspace}
           onWorkspaceCreate={() => setShowWorkspaceCreate(true)}
           activeWorkspace={activeWorkspace}
+          onFileCreated={handleFileSelect}
         />
         {activeWorkspace ? (
           <WorkspaceHome
@@ -243,12 +282,15 @@ export default function App() {
           />
         ) : (
           <EditorContainer
+            ref={editorContainerRef}
             content={state.activeTab.content}
             sourceMode={state.sourceMode}
+            splitMode={state.splitMode}
             searchVisible={state.searchVisible}
             onSearchClose={() => state.setSearchVisible(false)}
             onChange={handleContentChange}
             onOutlineChange={setHeadings}
+            onWikiLinkClick={handleWikiLinkClick}
           />
         )}
       </div>
@@ -278,7 +320,14 @@ export default function App() {
   )
 }
 
+const exportMd = new MarkdownIt({ html: true, linkify: true, typographer: true })
+
 function generateHtmlExport(markdownContent: string, theme: string): string {
+  let body = markdownContent
+  const fmMatch = body.match(/^---\n([\s\S]*?)\n---\n?/)
+  if (fmMatch) body = body.slice(fmMatch[0].length)
+  const renderedHtml = exportMd.render(body)
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -299,7 +348,7 @@ function generateHtmlExport(markdownContent: string, theme: string): string {
   </style>
 </head>
 <body>
-${markdownContent}
+${renderedHtml}
 </body>
 </html>`
 }

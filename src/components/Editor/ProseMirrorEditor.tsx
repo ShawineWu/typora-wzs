@@ -32,6 +32,7 @@ interface Props {
   content: string
   onChange: (content: string) => void
   onOutlineChange?: (headings: Array<{ level: number; text: string; pos: number }>) => void
+  onWikiLinkClick?: (target: string) => void
 }
 
 const outlinePluginKey = new PluginKey('outline')
@@ -77,11 +78,13 @@ const placeholderPlugin = new Plugin({
 })
 
 export const ProseMirrorEditor = forwardRef<ProseMirrorEditorRef, Props>(
-  ({ content, onChange, onOutlineChange }, ref) => {
+  ({ content, onChange, onOutlineChange, onWikiLinkClick }, ref) => {
     const editorRef = useRef<HTMLDivElement>(null)
     const viewRef = useRef<EditorView | null>(null)
     const onChangeRef = useRef(onChange)
     onChangeRef.current = onChange
+    const onWikiLinkClickRef = useRef(onWikiLinkClick)
+    onWikiLinkClickRef.current = onWikiLinkClick
 
     const isExternalUpdate = useRef(false)
 
@@ -197,6 +200,18 @@ export const ProseMirrorEditor = forwardRef<ProseMirrorEditorRef, Props>(
           task_item: (node, view, getPos) => new TaskItemView(node, view, getPos),
         },
         handleDOMEvents: {
+          click: (view, event) => {
+            const target = event.target as HTMLElement
+            if (target.classList.contains('wiki-link-node')) {
+              event.preventDefault()
+              const wikiTarget = target.getAttribute('data-target')
+              if (wikiTarget && onWikiLinkClickRef.current) {
+                onWikiLinkClickRef.current(wikiTarget)
+              }
+              return true
+            }
+            return false
+          },
           drop: (view, event) => {
             const files = event.dataTransfer?.files
             if (files && files.length > 0) {
