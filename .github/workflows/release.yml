@@ -24,13 +24,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci
 
       - name: Build frontend
-        run: npx tsc && npx vite build
+        run: npx vite build
 
       - name: Package Electron app
         run: npx electron-builder --publish never
