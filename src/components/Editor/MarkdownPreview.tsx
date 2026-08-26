@@ -23,6 +23,20 @@ md.renderer.rules.text = function(tokens, idx, options, env, self) {
   return defaultRender(tokens, idx, options, env, self)
 }
 
+// Mermaid code block rendering
+const defaultFence = md.renderer.rules.fence || function(tokens, idx, options, env, self) {
+  return self.renderToken(tokens, idx, options)
+}
+
+md.renderer.rules.fence = function(tokens, idx, options, env, self) {
+  const token = tokens[idx]
+  if (token.info.trim() === 'mermaid') {
+    const escaped = md.utils.escapeHtml(token.content.trim())
+    return `<div class="mermaid-preview" data-mermaid="${escaped}"><pre class="mermaid-source">${escaped}</pre></div>`
+  }
+  return defaultFence(tokens, idx, options, env, self)
+}
+
 interface Props {
   content: string
 }
@@ -45,6 +59,34 @@ export function MarkdownPreview({ content }: Props) {
     checkboxes.forEach(cb => {
       ;(cb as HTMLInputElement).disabled = true
     })
+  }, [html])
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const mermaidEls = containerRef.current.querySelectorAll('.mermaid-preview')
+    if (mermaidEls.length === 0) return
+
+    let cancelled = false
+
+    import('mermaid').then(({ default: mermaid }) => {
+      if (cancelled) return
+      mermaid.initialize({ startOnLoad: false, theme: 'default' })
+
+      mermaidEls.forEach(async (el, i) => {
+        if (cancelled) return
+        const source = el.getAttribute('data-mermaid')
+        if (!source) return
+        try {
+          const id = `mermaid-preview-${Date.now()}-${i}`
+          const { svg } = await mermaid.render(id, source)
+          if (!cancelled) el.innerHTML = svg
+        } catch {
+          // Keep source code display on error
+        }
+      })
+    }).catch(() => {})
+
+    return () => { cancelled = true }
   }, [html])
 
   return (

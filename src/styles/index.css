@@ -943,6 +943,21 @@ body {
   max-width: 100%;
 }
 
+/* ── Mermaid in Preview ── */
+.mermaid-preview {
+  padding: 16px;
+  text-align: center;
+  overflow-x: auto;
+}
+.mermaid-preview svg {
+  max-width: 100%;
+}
+.mermaid-source {
+  text-align: left;
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
+
 /* ── Front Matter ── */
 .front-matter-wrapper {
   margin-bottom: 28px;
