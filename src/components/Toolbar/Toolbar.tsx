@@ -5,6 +5,7 @@ interface Props {
   sourceMode: boolean
   onToggleSource: () => void
   onCommand: (cmd: string, ...args: any[]) => void
+  onOpenSettings?: () => void
 }
 
 const Icon = ({ d, size = 16, strokeWidth = 1.75 }: { d: string; size?: number; strokeWidth?: number }) => (
@@ -35,7 +36,7 @@ const icons = {
   h3: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"/></svg>,
 }
 
-export function Toolbar({ sourceMode, onToggleSource, onCommand }: Props) {
+export function Toolbar({ sourceMode, onToggleSource, onCommand, onOpenSettings }: Props) {
   const { t } = useTranslation()
 
   return (
@@ -76,6 +77,15 @@ export function Toolbar({ sourceMode, onToggleSource, onCommand }: Props) {
       </div>
       <div className="toolbar-spacer" />
       <div className="toolbar-group">
+        {onOpenSettings && (
+          <button
+            className="toolbar-btn"
+            onClick={onOpenSettings}
+            title={t('toolbar.settings') || 'Settings'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </button>
+        )}
         <button
           className={`toolbar-btn source-toggle ${sourceMode ? 'active' : ''}`}
           onClick={onToggleSource}

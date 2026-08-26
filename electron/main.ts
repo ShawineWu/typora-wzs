@@ -312,6 +312,118 @@ ipcMain.handle('shell:openExternal', async (_event, url: string) => {
   shell.openExternal(url)
 })
 
+// Workspace operations
+ipcMain.handle('fs:deleteFile', async (_event, filePath: string) => {
+  if (fs.existsSync(filePath)) {
+    const stat = fs.statSync(filePath)
+    if (stat.isDirectory()) {
+      fs.rmSync(filePath, { recursive: true })
+    } else {
+      fs.unlinkSync(filePath)
+    }
+    return true
+  }
+  return false
+})
+
+ipcMain.handle('workspace:create', async (_event, parentDir: string, config: any) => {
+  const wsDir = path.join(parentDir, config.slug)
+  if (!fs.existsSync(wsDir)) fs.mkdirSync(wsDir, { recursive: true })
+  const metaDir = path.join(wsDir, '.typora-wzs')
+  if (!fs.existsSync(metaDir)) fs.mkdirSync(metaDir, { recursive: true })
+  fs.writeFileSync(path.join(metaDir, 'workspace.json'), JSON.stringify(config, null, 2), 'utf-8')
+  return wsDir
+})
+
+ipcMain.handle('workspace:detect', async (_event, dirPath: string) => {
+  const configPath = path.join(dirPath, '.typora-wzs', 'workspace.json')
+  if (fs.existsSync(configPath)) {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+    return { ...config, path: dirPath }
+  }
+  return null
+})
+
+ipcMain.handle('workspace:listAll', async (_event, parentDir: string) => {
+  const results: any[] = []
+  try {
+    const entries = fs.readdirSync(parentDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+      const configPath = path.join(parentDir, entry.name, '.typora-wzs', 'workspace.json')
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+        results.push({ ...config, path: path.join(parentDir, entry.name) })
+      }
+    }
+  } catch {}
+  return results
+})
+
+ipcMain.handle('workspace:listEntries', async (_event, wsPath: string) => {
+  const entries: any[] = []
+  try {
+    const files = fs.readdirSync(wsPath, { withFileTypes: true })
+    for (const file of files) {
+      if (file.isDirectory() || file.name.startsWith('.')) continue
+      if (!/\.(md|markdown|txt)$/i.test(file.name)) continue
+      const filePath = path.join(wsPath, file.name)
+      const stat = fs.statSync(filePath)
+      const content = fs.readFileSync(filePath, 'utf-8')
+      const lines = content.split('\n')
+      let title = file.name.replace(/\.(md|markdown|txt)$/i, '')
+      const titleMatch = content.match(/^#\s+(.+)$/m)
+      if (titleMatch) title = titleMatch[1]
+      const excerpt = lines.filter(l => l.trim() && !l.startsWith('#')).slice(0, 2).join(' ').slice(0, 120)
+      const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0
+      entries.push({
+        name: file.name,
+        path: filePath,
+        title,
+        excerpt,
+        wordCount,
+        size: stat.size,
+        createdAt: stat.birthtime.toISOString(),
+        updatedAt: stat.mtime.toISOString(),
+      })
+    }
+  } catch {}
+  return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+})
+
+ipcMain.handle('workspace:createEntry', async (_event, wsPath: string, filename: string, content: string) => {
+  const filePath = path.join(wsPath, filename)
+  fs.writeFileSync(filePath, content, 'utf-8')
+  return filePath
+})
+
+ipcMain.handle('dialog:selectImage', async () => {
+  if (!mainWindow) return null
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }],
+  })
+  if (canceled || filePaths.length === 0) return null
+  return filePaths[0]
+})
+
+ipcMain.handle('dialog:selectDirectory', async () => {
+  if (!mainWindow) return null
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory', 'createDirectory'],
+  })
+  if (canceled || filePaths.length === 0) return null
+  return filePaths[0]
+})
+
+ipcMain.handle('fs:readImageAsDataUrl', async (_event, filePath: string) => {
+  const ext = path.extname(filePath).toLowerCase().slice(1)
+  const mimeMap: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp' }
+  const mime = mimeMap[ext] || 'image/png'
+  const buf = fs.readFileSync(filePath)
+  return `data:${mime};base64,${buf.toString('base64')}`
+})
+
 ipcMain.handle('app:getVersion', () => app.getVersion())
 
 ipcMain.handle('fs:getAutoSaveDir', () => {

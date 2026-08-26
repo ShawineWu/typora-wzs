@@ -24,6 +24,17 @@ const electronAPI = {
   listAutoSaves: (filePath: string) => ipcRenderer.invoke('fs:listAutoSaves', filePath),
   getAutoSaveDir: () => ipcRenderer.invoke('fs:getAutoSaveDir'),
 
+  createWorkspace: (parentDir: string, config: any) => ipcRenderer.invoke('workspace:create', parentDir, config),
+  detectWorkspace: (dirPath: string) => ipcRenderer.invoke('workspace:detect', dirPath),
+  listWorkspaces: (parentDir: string) => ipcRenderer.invoke('workspace:listAll', parentDir),
+  listWorkspaceEntries: (wsPath: string) => ipcRenderer.invoke('workspace:listEntries', wsPath),
+  createWorkspaceEntry: (wsPath: string, filename: string, content: string) => ipcRenderer.invoke('workspace:createEntry', wsPath, filename, content),
+
+  readImageAsDataUrl: (filePath: string) => ipcRenderer.invoke('fs:readImageAsDataUrl', filePath),
+  deleteFile: (filePath: string) => ipcRenderer.invoke('fs:deleteFile', filePath),
+  selectImage: () => ipcRenderer.invoke('dialog:selectImage'),
+  selectDirectory: () => ipcRenderer.invoke('dialog:selectDirectory'),
+
   on: (channel: string, callback: (...args: any[]) => void) => {
     const sub = (_event: any, ...args: any[]) => callback(...args)
     ipcRenderer.on(channel, sub)

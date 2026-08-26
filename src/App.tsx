@@ -5,6 +5,9 @@ import { Toolbar } from './components/Toolbar/Toolbar'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { EditorContainer } from './components/Editor/EditorContainer'
 import { StatusBar } from './components/StatusBar/StatusBar'
+import { WorkspaceCreate } from './components/Workspace/WorkspaceCreate'
+import { WorkspaceHome } from './components/Workspace/WorkspaceHome'
+import { SettingsDialog } from './components/Settings/SettingsDialog'
 import { useEditorState } from './hooks/useEditorState'
 import { serializeMarkdown, parseMarkdown } from './editor'
 
@@ -14,11 +17,76 @@ interface Heading {
   pos: number
 }
 
+interface BackgroundConfig {
+  imagePath: string | null
+  opacity: number
+}
+
+function loadBgConfig(): BackgroundConfig {
+  try {
+    const raw = localStorage.getItem('typora-wzs-bg')
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return { imagePath: null, opacity: 0.1 }
+}
+
+function saveBgConfig(config: BackgroundConfig) {
+  localStorage.setItem('typora-wzs-bg', JSON.stringify(config))
+}
+
 export default function App() {
   const { t } = useTranslation()
   const state = useEditorState()
   const [headings, setHeadings] = useState<Heading[]>([])
   const editorCommandRef = useRef<((cmd: string, ...args: any[]) => void) | null>(null)
+
+  const [showWorkspaceCreate, setShowWorkspaceCreate] = useState(false)
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceConfig | null>(null)
+  const [workspaces, setWorkspaces] = useState<WorkspaceConfig[]>([])
+  const [showSettings, setShowSettings] = useState(false)
+  const [bgConfig, setBgConfig] = useState<BackgroundConfig>(loadBgConfig)
+  const [bgDataUrl, setBgDataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!bgConfig.imagePath) {
+      setBgDataUrl(null)
+      return
+    }
+    if (bgConfig.imagePath.startsWith('data:')) {
+      setBgDataUrl(bgConfig.imagePath)
+      return
+    }
+    if (!window.electronAPI) return
+    window.electronAPI.readImageAsDataUrl(bgConfig.imagePath)
+      .then(dataUrl => setBgDataUrl(dataUrl))
+      .catch(() => setBgDataUrl(null))
+  }, [bgConfig.imagePath])
+
+  const loadWorkspaces = useCallback(async () => {
+    if (!window.electronAPI || !state.folderPath) return
+    try {
+      const list = await window.electronAPI.listWorkspaces(state.folderPath)
+      setWorkspaces(list)
+    } catch {
+      setWorkspaces([])
+    }
+  }, [state.folderPath])
+
+  useEffect(() => { loadWorkspaces() }, [loadWorkspaces])
+
+  const handleCreateWorkspace = useCallback(async (config: WorkspaceConfig) => {
+    if (!window.electronAPI) return
+    const parentDir = state.folderPath || (await window.electronAPI.selectDirectory())
+    if (!parentDir) return
+    await window.electronAPI.createWorkspace(parentDir, config)
+    if (!state.folderPath) state.setFolderPath(parentDir)
+    loadWorkspaces()
+  }, [state.folderPath, state.setFolderPath, loadWorkspaces])
+
+  const handleBackgroundChange = useCallback((bg: BackgroundConfig) => {
+    setBgConfig(bg)
+    saveBgConfig(bg)
+  }, [])
 
   const handleContentChange = useCallback((content: string) => {
     state.updateTab(state.activeTabId, {
@@ -37,6 +105,7 @@ export default function App() {
     if (!window.electronAPI) return
     try {
       const content = await window.electronAPI.readFile(filePath)
+      setActiveWorkspace(null)
       state.openFile(filePath, content)
     } catch (err) {
       console.error('Failed to open file:', err)
@@ -48,9 +117,7 @@ export default function App() {
     await window.electronAPI.openFolder()
   }, [])
 
-  const handleHeadingClick = useCallback((pos: number) => {
-    // Scroll to heading in editor - handled by ProseMirror
-  }, [])
+  const handleHeadingClick = useCallback((pos: number) => {}, [])
 
   const handleExportHtml = useCallback(async () => {
     if (!window.electronAPI) return
@@ -70,6 +137,7 @@ export default function App() {
     const unsubs: (() => void)[] = []
 
     unsubs.push(window.electronAPI.on('file:opened', ({ filePath, content }: any) => {
+      setActiveWorkspace(null)
       state.openFile(filePath, content)
     }))
 
@@ -77,7 +145,7 @@ export default function App() {
       state.setFolderPath(folderPath)
     }))
 
-    unsubs.push(window.electronAPI.on('menu:new-file', () => state.newTab()))
+    unsubs.push(window.electronAPI.on('menu:new-file', () => { setActiveWorkspace(null); state.newTab() }))
     unsubs.push(window.electronAPI.on('menu:save', () => state.saveFile()))
     unsubs.push(window.electronAPI.on('menu:save-as', () => state.saveFileAs()))
     unsubs.push(window.electronAPI.on('menu:toggle-source', () => state.setSourceMode(prev => !prev)))
@@ -127,19 +195,29 @@ export default function App() {
   }, [state.saveFile])
 
   return (
-    <div className={`app theme-${state.theme}`}>
+    <div className={`app theme-${state.theme} ${bgDataUrl ? 'has-bg-image' : ''}`}>
+      {bgDataUrl && (
+        <div
+          className="app-bg-image"
+          style={{
+            backgroundImage: `url(${bgDataUrl})`,
+            opacity: bgConfig.opacity,
+          }}
+        />
+      )}
       <div className="titlebar" />
       <TabBar
         tabs={state.tabs}
         activeTabId={state.activeTabId}
-        onSelectTab={state.setActiveTabId}
+        onSelectTab={(id) => { setActiveWorkspace(null); state.setActiveTabId(id) }}
         onCloseTab={state.closeTab}
-        onNewTab={state.newTab}
+        onNewTab={() => { setActiveWorkspace(null); state.newTab() }}
       />
       <Toolbar
         sourceMode={state.sourceMode}
         onToggleSource={() => state.setSourceMode(prev => !prev)}
         onCommand={handleCommand}
+        onOpenSettings={() => setShowSettings(true)}
       />
       <div className="main-content">
         <Sidebar
@@ -151,15 +229,28 @@ export default function App() {
           onFileSelect={handleFileSelect}
           onHeadingClick={handleHeadingClick}
           onOpenFolder={handleOpenFolder}
+          workspaces={workspaces}
+          onWorkspaceSelect={setActiveWorkspace}
+          onWorkspaceCreate={() => setShowWorkspaceCreate(true)}
+          activeWorkspace={activeWorkspace}
         />
-        <EditorContainer
-          content={state.activeTab.content}
-          sourceMode={state.sourceMode}
-          searchVisible={state.searchVisible}
-          onSearchClose={() => state.setSearchVisible(false)}
-          onChange={handleContentChange}
-          onOutlineChange={setHeadings}
-        />
+        {activeWorkspace ? (
+          <WorkspaceHome
+            workspace={activeWorkspace}
+            onOpenFile={handleFileSelect}
+            onBack={() => setActiveWorkspace(null)}
+            onDeleteWorkspace={() => { setActiveWorkspace(null); loadWorkspaces() }}
+          />
+        ) : (
+          <EditorContainer
+            content={state.activeTab.content}
+            sourceMode={state.sourceMode}
+            searchVisible={state.searchVisible}
+            onSearchClose={() => state.setSearchVisible(false)}
+            onChange={handleContentChange}
+            onOutlineChange={setHeadings}
+          />
+        )}
       </div>
       <StatusBar
         content={state.activeTab.content}
@@ -169,6 +260,19 @@ export default function App() {
         theme={state.theme}
         onThemeChange={state.setTheme}
         onLanguageChange={() => {}}
+      />
+
+      <WorkspaceCreate
+        visible={showWorkspaceCreate}
+        onClose={() => setShowWorkspaceCreate(false)}
+        onCreate={handleCreateWorkspace}
+      />
+
+      <SettingsDialog
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+        onBackgroundChange={handleBackgroundChange}
+        currentBg={bgConfig}
       />
     </div>
   )
