@@ -33,6 +33,24 @@
     "i18next": "^24.2.2",
     "react-i18next": "^15.4.1"
   },
+  "build": {
+    "appId": "com.wzs.typora",
+    "productName": "Typora-WZS",
+    "files": [
+      "dist-electron/**/*",
+      "dist/**/*"
+    ],
+    "mac": {
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Office"
+    }
+  },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
     "@types/react": "^18.3.12",
