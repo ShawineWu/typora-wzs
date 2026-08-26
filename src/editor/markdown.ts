@@ -300,12 +300,14 @@ function parseInline(tokens: any[]): Node[] {
   for (const token of tokens) {
     if (token.type === 'text') {
       const content = token.content
+      if (!content) continue
       if (/\[\[/.test(content)) {
         result.push(...parseWikiLinks(content, markStack.length > 0 ? markStack.slice() : []))
       } else {
         result.push(schema.text(content, markStack.length > 0 ? markStack.slice() : undefined))
       }
     } else if (token.type === 'code_inline') {
+      if (!token.content) continue
       result.push(schema.text(token.content, [schema.marks.code.create()]))
     } else if (token.type === 'softbreak' || token.type === 'hardbreak') {
       result.push(schema.nodes.hard_break.create())
@@ -335,6 +337,7 @@ function parseInline(tokens: any[]): Node[] {
         title: token.attrGet('title'),
       }))
     } else if (token.type === 'math_inline') {
+      if (!token.content) continue
       result.push(schema.text(token.content, [schema.marks.math_inline.create()]))
     } else if (token.type === 'html_inline') {
       if (token.content === '<br>' || token.content === '<br/>') {
