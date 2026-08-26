@@ -1,6 +1,6 @@
 {
   "name": "typora-wzs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A Typora-like Markdown editor built with Electron + React + ProseMirror",
   "author": {
     "name": "ShawineWu",
