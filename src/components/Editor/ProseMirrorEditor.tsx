@@ -160,6 +160,22 @@ export const ProseMirrorEditor = forwardRef<ProseMirrorEditorRef, Props>(
       },
     }))
 
+    const contentRef = useRef(content)
+
+    useEffect(() => {
+      if (!viewRef.current || isExternalUpdate.current) return
+      if (content === contentRef.current) return
+      contentRef.current = content
+      isExternalUpdate.current = true
+      const doc = parseMarkdown(content)
+      const state = EditorState.create({
+        doc,
+        plugins: viewRef.current.state.plugins,
+      })
+      viewRef.current.updateState(state)
+      isExternalUpdate.current = false
+    }, [content])
+
     useEffect(() => {
       if (!editorRef.current) return
 
@@ -181,6 +197,7 @@ export const ProseMirrorEditor = forwardRef<ProseMirrorEditorRef, Props>(
                   if (isExternalUpdate.current) return
                   if (!view.state.doc.eq(prevState.doc)) {
                     const md = serializeMarkdown(view.state.doc)
+                    contentRef.current = md
                     onChangeRef.current(md)
                   }
                 },
