@@ -1,0 +1,26 @@
+node_modules/
+dist/
+dist-electron/
+*.log
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Editor
+.idea/
+.vscode/
+*.sublime-*
+
+# Electron builder
+release/
+build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Vite
+.vite/
