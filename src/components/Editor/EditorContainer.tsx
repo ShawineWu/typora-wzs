@@ -15,6 +15,7 @@ interface Props {
   content: string
   sourceMode: boolean
   splitMode: boolean
+  previewMode: boolean
   searchVisible: boolean
   onSearchClose: () => void
   onChange: (content: string) => void
@@ -26,7 +27,7 @@ export interface EditorContainerRef {
   execCommand: (cmd: string, ...args: any[]) => void
 }
 
-export const EditorContainer = forwardRef<EditorContainerRef, Props>(function EditorContainer({ content, sourceMode, splitMode, searchVisible, onSearchClose, onChange, onOutlineChange, onWikiLinkClick }, ref) {
+export const EditorContainer = forwardRef<EditorContainerRef, Props>(function EditorContainer({ content, sourceMode, splitMode, previewMode, searchVisible, onSearchClose, onChange, onOutlineChange, onWikiLinkClick }, ref) {
   const { i18n } = useTranslation()
   const isZh = i18n.language.startsWith('zh')
   const editorRef = useRef<ProseMirrorEditorRef>(null)
@@ -115,6 +116,14 @@ export const EditorContainer = forwardRef<EditorContainerRef, Props>(function Ed
     searchMatchesRef.current = []
     return matches.length
   }, [])
+
+  if (previewMode) {
+    return (
+      <div className="editor-container preview-mode">
+        <MarkdownPreview content={content} />
+      </div>
+    )
+  }
 
   if (splitMode) {
     return (

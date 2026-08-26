@@ -19,6 +19,7 @@ interface Props {
   onFileSelect: (filePath: string) => void
   onHeadingClick: (pos: number) => void
   onOpenFolder: () => void
+  onToggleVisible: () => void
   workspaces?: WorkspaceConfig[]
   onWorkspaceSelect?: (ws: WorkspaceConfig) => void
   onWorkspaceCreate?: () => void
@@ -26,7 +27,7 @@ interface Props {
   onFileCreated?: (filePath: string) => void
 }
 
-export function Sidebar({ visible, outlineVisible, folderPath, headings, activeFilePath, onFileSelect, onHeadingClick, onOpenFolder, workspaces, onWorkspaceSelect, onWorkspaceCreate, activeWorkspace, onFileCreated }: Props) {
+export function Sidebar({ visible, outlineVisible, folderPath, headings, activeFilePath, onFileSelect, onHeadingClick, onOpenFolder, onToggleVisible, workspaces, onWorkspaceSelect, onWorkspaceCreate, activeWorkspace, onFileCreated }: Props) {
   const { t, i18n } = useTranslation()
   const isZh = i18n.language.startsWith('zh')
   const [activePanel, setActivePanel] = useState<'files' | 'outline'>('files')
@@ -50,7 +51,17 @@ export function Sidebar({ visible, outlineVisible, folderPath, headings, activeF
     refreshFileTree()
   }, [refreshFileTree])
 
-  if (!visible) return null
+  if (!visible) {
+    return (
+      <div className="sidebar sidebar-collapsed">
+        <button className="sidebar-toggle" onClick={onToggleVisible} title={t('sidebar.expand') || 'Expand Sidebar'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </button>
+      </div>
+    )
+  }
 
   const hasWorkspaces = workspaces && workspaces.length > 0
 
@@ -140,6 +151,12 @@ export function Sidebar({ visible, outlineVisible, folderPath, headings, activeF
           onFileSelect={onFileSelect}
         />
       )}
+      <button className="sidebar-toggle" onClick={onToggleVisible} title={t('sidebar.collapse') || 'Collapse Sidebar'}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 6 9 12 15 18"/>
+        </svg>
+        <span>{isZh ? '收起侧栏' : 'Collapse'}</span>
+      </button>
     </div>
   )
 }

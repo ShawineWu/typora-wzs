@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next'
 interface Props {
   sourceMode: boolean
   splitMode: boolean
+  previewMode: boolean
   onToggleSource: () => void
   onToggleSplit: () => void
+  onTogglePreview: () => void
   onCommand: (cmd: string, ...args: any[]) => void
   onOpenSettings?: () => void
 }
@@ -34,12 +36,13 @@ const icons = {
   source: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="14" y1="4" x2="10" y2="20"/></svg>,
   wysiwyg: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
   split: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>,
+  preview: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
   h1: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17 12l3-2v8"/></svg>,
   h2: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"/></svg>,
   h3: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17.5 10.5c1.7-1 3.5 0 3.5 1.5a2 2 0 0 1-2 2"/><path d="M17 17.5c2 1.5 4 .3 4-1.5a2 2 0 0 0-2-2"/></svg>,
 }
 
-export function Toolbar({ sourceMode, splitMode, onToggleSource, onToggleSplit, onCommand, onOpenSettings }: Props) {
+export function Toolbar({ sourceMode, splitMode, previewMode, onToggleSource, onToggleSplit, onTogglePreview, onCommand, onOpenSettings }: Props) {
   const { t } = useTranslation()
 
   return (
@@ -89,6 +92,13 @@ export function Toolbar({ sourceMode, splitMode, onToggleSource, onToggleSplit, 
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           </button>
         )}
+        <button
+          className={`toolbar-btn ${previewMode ? 'active' : ''}`}
+          onClick={onTogglePreview}
+          title={t('toolbar.preview') || 'Preview'}
+        >
+          {icons.preview}
+        </button>
         <button
           className={`toolbar-btn ${splitMode ? 'active' : ''}`}
           onClick={onToggleSplit}

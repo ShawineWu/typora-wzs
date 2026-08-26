@@ -64,7 +64,10 @@ const resources = {
       'contextMenu.delete': 'Delete',
       'contextMenu.copyPath': 'Copy Path',
       'toolbar.split': 'Split View',
+      'toolbar.preview': 'Preview',
       'sidebar.backlinks': 'Backlinks',
+      'sidebar.collapse': 'Collapse Sidebar',
+      'sidebar.expand': 'Expand Sidebar',
     },
   },
   zh: {
@@ -129,7 +132,10 @@ const resources = {
       'contextMenu.delete': '删除',
       'contextMenu.copyPath': '复制路径',
       'toolbar.split': '分屏预览',
+      'toolbar.preview': '全屏预览',
       'sidebar.backlinks': '反向链接',
+      'sidebar.collapse': '收起侧栏',
+      'sidebar.expand': '展开侧栏',
     },
   },
 }

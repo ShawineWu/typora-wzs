@@ -252,14 +252,17 @@ export default function App() {
       <Toolbar
         sourceMode={state.sourceMode}
         splitMode={state.splitMode}
-        onToggleSource={() => { state.setSourceMode(prev => !prev); state.setSplitMode(false) }}
-        onToggleSplit={() => { state.setSplitMode(prev => !prev); state.setSourceMode(false) }}
+        previewMode={state.previewMode}
+        onToggleSource={() => { state.setSourceMode(prev => !prev); state.setSplitMode(false); state.setPreviewMode(false) }}
+        onToggleSplit={() => { state.setSplitMode(prev => !prev); state.setSourceMode(false); state.setPreviewMode(false) }}
+        onTogglePreview={() => { state.setPreviewMode(prev => !prev); state.setSourceMode(false); state.setSplitMode(false) }}
         onCommand={handleCommand}
         onOpenSettings={() => setShowSettings(true)}
       />
       <div className="main-content">
         <Sidebar
           visible={state.sidebarVisible}
+          onToggleVisible={() => state.setSidebarVisible(prev => !prev)}
           outlineVisible={state.outlineVisible}
           folderPath={state.folderPath}
           headings={headings}
@@ -286,6 +289,7 @@ export default function App() {
             content={state.activeTab.content}
             sourceMode={state.sourceMode}
             splitMode={state.splitMode}
+            previewMode={state.previewMode}
             searchVisible={state.searchVisible}
             onSearchClose={() => state.setSearchVisible(false)}
             onChange={handleContentChange}

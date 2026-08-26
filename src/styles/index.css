@@ -462,6 +462,40 @@ body {
   overflow: hidden;
 }
 
+.sidebar.sidebar-collapsed {
+  width: 36px;
+  min-width: 36px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+}
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-primary);
+}
+
+.sidebar-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-collapsed .sidebar-toggle {
+  border-top: none;
+  padding: 8px;
+  justify-content: center;
+}
+
 .sidebar-tabs {
   display: flex;
   border-bottom: 1px solid var(--border-primary);
@@ -2147,6 +2181,18 @@ body {
 
 .btn-danger-fill:hover {
   background: #dc2626;
+}
+
+/* ========== Preview Mode ========== */
+.editor-container.preview-mode {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 40px;
+}
+
+.editor-container.preview-mode .markdown-preview {
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 /* ========== Split View ========== */
